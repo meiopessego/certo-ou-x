@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Certo ou X">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<title>Certo ou X</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: one narrow column for a phone. Today's answer on top, the row of dots below. */
+:root{
+  --bg:#f1f3f8; --surface:#ffffff; --ink:#161b2e; --muted:#636b85; --line:#d5dae6;
+  --yes:#18a058; --yes-deep:#0f7a41; --no:#d8433f; --no-deep:#ab2b28;
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#10131d; --surface:#1a1f2e; --ink:#eef0f7; --muted:#99a1ba; --line:#2f3649;
+    --yes:#27b869; --yes-deep:#178a4b; --no:#e2554f; --no-deep:#b53a35;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#10131d; --surface:#1a1f2e; --ink:#eef0f7; --muted:#99a1ba; --line:#2f3649;
+  --yes:#27b869; --yes-deep:#178a4b; --no:#e2554f; --no-deep:#b53a35;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.45}
+main{max-width:460px;margin:0 auto;padding:calc(24px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));display:flex;flex-direction:column;gap:20px}
+h1,h2{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.1}
+h1{font-size:30px;font-weight:800}
+h2{font-size:19px;font-weight:600}
+p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:22px;display:flex;flex-direction:column;gap:16px}
+
+/* setup */
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.preset{background:var(--bg);border:2px solid var(--line);border-radius:14px;padding:14px 10px;font-weight:600}
+.preset[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+label{font-weight:600;display:flex;flex-direction:column;gap:6px}
+input{font:inherit;color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:14px;padding:12px 14px;width:100%}
+.custom{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.custom input{width:110px}
+.primary{background:var(--ink);color:var(--bg);border:0;border-radius:16px;padding:16px;font-weight:600;font-size:18px}
+.link{background:none;border:0;padding:6px 0;color:var(--muted);text-decoration:underline;font-size:14px;align-self:center}
+.row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;align-items:center}
+
+/* today */
+.today{border-radius:26px;padding:26px 22px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;background:var(--surface);border:1px solid var(--line);position:relative;overflow:hidden}
+.today.yes{background:var(--yes);border-color:var(--yes-deep);color:#fff}
+.today.no{background:var(--no);border-color:var(--no-deep);color:#fff}
+.today.yes .link,.today.no .link{color:#fff}
+.today .big{font-family:var(--display);font-weight:800;font-size:34px;line-height:1.05}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%}
+.choice{border:0;border-radius:22px;height:132px;display:grid;place-items:center;color:#fff;transition:transform .12s}
+.choice:active{transform:scale(.95)}
+.choice.no{background:var(--no);box-shadow:0 6px 0 var(--no-deep)}
+.choice.yes{background:var(--yes);box-shadow:0 6px 0 var(--yes-deep)}
+.choice svg{width:68px;height:68px}
+.face{width:150px;height:150px}
+.date-chip{background:rgba(255,255,255,.2);border-radius:999px;padding:6px 14px;font-weight:600;font-size:15px}
+canvas#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+
+/* the little animations that stand in for gifs */
+.dance-a{animation:hop 0.7s ease-in-out infinite}
+.dance-b{animation:wiggle 0.6s ease-in-out infinite}
+.dance-c{animation:spin 1.6s cubic-bezier(.5,0,.3,1.4) infinite}
+.sad-sway{animation:sway 3.2s ease-in-out infinite}
+.tear{animation:tear 1.8s ease-in infinite}
+.arm{transform-origin:75px 95px;animation:wave .5s ease-in-out infinite alternate}
+.pop{animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes hop{0%,100%{transform:translateY(0) scale(1,1)}45%{transform:translateY(-22px) scale(.96,1.05)}60%{transform:translateY(-22px) rotate(6deg)}90%{transform:translateY(0) scale(1.06,.92)}}
+@keyframes wiggle{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+@keyframes spin{0%,35%{transform:rotate(0) scale(1)}70%{transform:rotate(360deg) scale(1.15)}100%{transform:rotate(360deg) scale(1)}}
+@keyframes sway{0%,100%{transform:rotate(-5deg) translateY(0)}50%{transform:rotate(5deg) translateY(5px)}}
+@keyframes tear{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(38px);opacity:0}}
+@keyframes wave{from{transform:rotate(-12deg)}to{transform:rotate(18deg)}}
+@keyframes pop{from{transform:scale(.6)}to{transform:scale(1)}}
+@media (prefers-reduced-motion: reduce){
+  .dance-a,.dance-b,.dance-c,.sad-sway,.tear,.arm,.pop{animation:none}
+}
+
+/* dots */
+.counts{display:flex;gap:8px;flex-wrap:wrap}
+.pill{border-radius:999px;padding:5px 12px;font-weight:600;font-size:14px;font-variant-numeric:tabular-nums;border:1px solid var(--line);background:var(--bg)}
+.pill.yes{background:var(--yes);border-color:var(--yes);color:#fff}
+.pill.no{background:var(--no);border-color:var(--no);color:#fff}
+.dots{display:flex;flex-wrap:wrap;gap:var(--gap,8px)}
+.dot{width:var(--d,26px);height:var(--d,26px);border-radius:50%;border:2px solid var(--line);background:transparent;flex:none}
+.dot.future{border-style:dashed;opacity:.55}
+.dot.yes{background:var(--yes);border-color:var(--yes)}
+.dot.no{background:var(--no);border-color:var(--no)}
+.dot.today{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--ink)}
+.legend{display:flex;gap:14px;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend .dot{--d:12px}
+.note{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:10px 14px}
+</style>
+</head>
+<body>
+<main id="app"><p class="muted">A carregar…</p></main>
+<canvas id="confetti" aria-hidden="true"></canvas>
+<script>
+(function(){
+"use strict";
+var KEY = "certo-ou-x-v1";
+var app = document.getElementById("app");
+var state = null;        // {name, start:"YYYY-MM-DD", days:N, marks:{"YYYY-MM-DD":1|0}}
+var unsynced = false;    // local copy holds something the server has not confirmed
+var docRef = null;
+var ready = false;       // we know enough to draw a real screen
+var note = "";
+var confirmReset = false;
+var writing = Promise.resolve();
+
+/* ---------- dates ---------- */
+function iso(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function parse(s){ var p=s.split("-").map(Number); return new Date(p[0],p[1]-1,p[2]); }
+function addDays(d,n){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()+n); }
+function diffDays(a,b){ return Math.round((Date.UTC(b.getFullYear(),b.getMonth(),b.getDate())-Date.UTC(a.getFullYear(),a.getMonth(),a.getDate()))/864e5); }
+function today(){ var n=new Date(); return new Date(n.getFullYear(),n.getMonth(),n.getDate()); }
+function longDate(d){ try{ return d.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"}); }catch(e){ return iso(d); } }
+function daysInNextMonth(){ var t=today(); var e=new Date(t.getFullYear(),t.getMonth()+1,t.getDate()); return diffDays(t,e); }
+
+/* ---------- storage ---------- */
+function loadLocal(){
+  try{ var raw=localStorage.getItem(KEY); if(!raw) return; var o=JSON.parse(raw); state=o.state||null; unsynced=!!o.unsynced; }catch(e){}
+}
+function saveLocal(){
+  try{ localStorage.setItem(KEY, JSON.stringify({state:state, unsynced:unsynced})); }catch(e){}
+}
+function valid(d){ return d && typeof d.start==="string" && d.days>0 && d.marks && typeof d.marks==="object"; }
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function persist(){
+  unsynced = true; saveLocal();
+  if(!docRef) return;
+  var body = state ? clone(state) : null;
+  writing = writing.then(function(){ return body ? docRef.set(body) : docRef.delete(); })
+    .then(function(){ unsynced=false; saveLocal(); if(note){ note=""; render(); } })
+    .catch(function(){ note="Não consegui guardar na nuvem. Fica guardado neste dispositivo."; render(); });
+}
+
+/* ---------- actions ---------- */
+function startGoal(name, days){
+  state = { name:name, start:iso(today()), days:days, marks:{} };
+  persist(); render();
+}
+function answer(v){
+  state.marks[iso(today())] = v;
+  persist(); render(true);
+  if(v===1) confetti();
+}
+function undo(){
+  delete state.marks[iso(today())];
+  persist(); render();
+}
+function reset(){
+  state = null; confirmReset = false;
+  persist(); render();
+}
+
+/* ---------- drawings ---------- */
+var CHECK = '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M12 34l14 14 26-30" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+var CROSS = '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M16 16l32 32M48 16L16 48" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round"/></svg>';
+function happyFace(cls){
+  return '<svg class="face" viewBox="0 0 150 150" role="img" aria-label="Cara feliz com um certo">'
+   + '<g class="'+cls+'" style="transform-origin:75px 80px">'
+   + '<circle cx="75" cy="78" r="52" fill="#fff"/>'
+   + '<path d="M54 68q7-10 14 0M82 68q7-10 14 0" fill="none" stroke="#0f7a41" stroke-width="6" stroke-linecap="round"/>'
+   + '<path d="M50 86q25 30 50 0z" fill="#0f7a41"/>'
+   + '<g class="arm"><path d="M118 96l22-26" stroke="#fff" stroke-width="9" stroke-linecap="round"/></g>'
+   + '<circle cx="118" cy="36" r="20" fill="#0f7a41" stroke="#fff" stroke-width="5"/>'
+   + '<path d="M108 37l7 7 13-15" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>'
+   + '</g></svg>';
+}
+function sadFace(){
+  return '<svg class="face" viewBox="0 0 150 150" role="img" aria-label="Cara triste">'
+   + '<g class="sad-sway" style="transform-origin:75px 130px">'
+   + '<circle cx="75" cy="78" r="52" fill="#fff"/>'
+   + '<path d="M50 60l18 7M100 60l-18 7" stroke="#ab2b28" stroke-width="6" stroke-linecap="round"/>'
+   + '<circle cx="60" cy="76" r="5" fill="#ab2b28"/><circle cx="90" cy="76" r="5" fill="#ab2b28"/>'
+   + '<path d="M54 108q21-22 42 0" fill="none" stroke="#ab2b28" stroke-width="6" stroke-linecap="round"/>'
+   + '<path class="tear" d="M60 86q-6 10 0 14q6-4 0-14z" fill="#5aa9f0"/>'
+   + '</g></svg>';
+}
+var YES_LINES = ["Boa! Mais um.","Siga! Assim é que é.","Check. O sofá que espere.","Feito. Amanhã há mais.","Imparável.","Certinho. Nem custou (muito)."];
+var NO_LINES = ["Hoje não deu. Amanhã volta-se.","Um X não estraga a fila toda.","Acontece. Amanhã é outro dia.","Fica o X. Segue o jogo."];
+var DANCES = ["dance-a","dance-b","dance-c"];
+function pick(list, seed){ return list[seed % list.length]; }
+
+/* ---------- screens ---------- */
+function esc(s){ var d=document.createElement("div"); d.textContent=s; return d.innerHTML; }
+
+function renderSetup(){
+  var month = daysInNextMonth();
+  app.innerHTML =
+    '<header><h1>Certo ou X</h1><p class="muted">Um prazo, uma pergunta por dia.</p></header>'
+  + (note?'<p class="note small">'+esc(note)+'</p>':'')
+  + '<form class="card" id="setup">'
+  +   '<label for="goal-name">O que queres cumprir?<input id="goal-name" maxlength="60" placeholder="Ex.: estudar 1 hora" autocomplete="off"></label>'
+  +   '<div><h2>Durante quanto tempo?</h2></div>'
+  +   '<div class="presets">'
+  +     '<button type="button" class="preset" data-days="7" aria-pressed="false">1 semana</button>'
+  +     '<button type="button" class="preset" data-days="30" aria-pressed="true">30 dias</button>'
+  +     '<button type="button" class="preset" data-days="'+month+'" data-k="m" aria-pressed="false">1 mês ('+month+' dias)</button>'
+  +     '<button type="button" class="preset" data-days="365" aria-pressed="false">1 ano</button>'
+  +   '</div>'
+  +   '<div class="custom"><label for="goal-days" style="flex-direction:row;align-items:center;gap:10px">Ou outro número de dias <input id="goal-days" type="number" inputmode="numeric" min="1" max="1000" value="30"></label></div>'
+  +   '<p class="small muted" id="setup-error" role="alert"></p>'
+  +   '<button class="primary" type="submit">Começar hoje</button>'
+  + '</form>';
+  var daysInput = document.getElementById("goal-days");
+  var presets = app.querySelectorAll(".preset");
+  function sync(el){ presets.forEach(function(p){ p.setAttribute("aria-pressed", p===el ? "true":"false"); }); }
+  presets.forEach(function(p){ p.addEventListener("click", function(){ daysInput.value=p.dataset.days; sync(p); }); });
+  daysInput.addEventListener("input", function(){ sync(null); });
+  document.getElementById("setup").addEventListener("submit", function(e){
+    e.preventDefault();
+    var n = parseInt(daysInput.value,10);
+    if(!(n>=1 && n<=1000)){ document.getElementById("setup-error").textContent="Escolhe entre 1 e 1000 dias."; return; }
+    startGoal(document.getElementById("goal-name").value.trim(), n);
+  });
+}
+
+function dotsBlock(idx){
+  var n = state.days, start = parse(state.start), yes=0, no=0, empty=0, html="";
+  for(var i=0;i<n;i++){
+    var k = iso(addDays(start,i)), m = state.marks[k], cls="dot", label="Dia "+(i+1)+": ";
+    if(m===1){ cls+=" yes"; yes++; label+="certo"; }
+    else if(m===0){ cls+=" no"; no++; label+="X"; }
+    else if(i<idx){ empty++; label+="sem resposta"; }
+    else if(i>idx){ cls+=" future"; label+="por vir"; }
+    else { label+="hoje, por responder"; }
+    if(i===idx) cls+=" today";
+    html += '<span class="'+cls+'" title="'+label+'"></span>';
+  }
+  var d = n<=31 ? 26 : n<=100 ? 18 : n<=200 ? 14 : 11;
+  var gap = n<=31 ? 9 : n<=100 ? 7 : 5;
+  return '<section class="card" aria-label="Progresso">'
+    + '<div class="counts"><span class="pill yes">'+yes+' certos</span><span class="pill no">'+no+' X</span><span class="pill">'+empty+' sem resposta</span><span class="pill">'+n+' dias</span></div>'
+    + '<div class="dots" style="--d:'+d+'px;--gap:'+gap+'px" role="img" aria-label="'+yes+' certos e '+no+' X em '+n+' dias">'+html+'</div>'
+    + '<div class="legend small muted"><span><i class="dot yes"></i>certo</span><span><i class="dot no"></i>X</span><span><i class="dot"></i>sem resposta</span><span><i class="dot future"></i>por vir</span></div>'
+    + '</section>';
+}
+
+function resetBlock(label){
+  if(confirmReset){
+    return '<div class="row small"><span>Apagar este prazo e todas as bolinhas?</span>'
+      + '<button class="link" id="reset-yes">Sim, apagar</button><button class="link" id="reset-no">Cancelar</button></div>';
+  }
+  return '<button class="link" id="reset-ask">'+label+'</button>';
+}
+
+function renderGoal(justAnswered){
+  var t = today(), idx = diffDays(parse(state.start), t), n = state.days;
+  var title = state.name ? esc(state.name) : "O meu prazo";
+  var head, block;
+  if(idx >= n){
+    var yes=0; for(var k in state.marks){ if(state.marks[k]===1) yes++; }
+    head = '<header><h1>'+title+'</h1><p class="muted">Prazo terminado</p></header>';
+    block = '<section class="today"><p class="big">'+yes+' de '+n+'</p><p>dias com certo. Acabou o prazo.</p>'
+          + '<button class="primary" id="new-goal">Novo prazo</button></section>';
+  } else {
+    var m = state.marks[iso(t)], seed = idx + t.getDate();
+    head = '<header><h1>'+title+'</h1><p class="muted">Dia '+(idx+1)+' de '+n+' · '+longDate(t)+'</p></header>';
+    if(m===1){
+      block = '<section class="today yes" aria-live="polite"><div class="'+(justAnswered?"pop":"")+'">'+happyFace(pick(DANCES,seed))+'</div>'
+            + '<p class="big">Certo!</p><p class="date-chip">'+longDate(t)+'</p><p>'+pick(YES_LINES,seed)+'</p>'
+            + '<button class="link" id="undo">Mudar resposta</button></section>';
+    } else if(m===0){
+      block = '<section class="today no" aria-live="polite"><div class="'+(justAnswered?"pop":"")+'">'+sadFace()+'</div>'
+            + '<p class="big">X</p><p class="date-chip">'+longDate(t)+'</p><p>'+pick(NO_LINES,seed)+'</p>'
+            + '<button class="link" id="undo">Mudar resposta</button></section>';
+    } else {
+      block = '<section class="today"><h2>Hoje cumpriste?</h2><div class="choices">'
+            + '<button class="choice no" id="btn-no" aria-label="X, não cumpri">'+CROSS+'</button>'
+            + '<button class="choice yes" id="btn-yes" aria-label="Certo, cumpri">'+CHECK+'</button>'
+            + '</div></section>';
+    }
+  }
+  app.innerHTML = head + (note?'<p class="note small">'+esc(note)+'</p>':'') + block + dotsBlock(Math.min(idx,n)) + (idx>=n ? "" : resetBlock("Apagar e começar outro prazo"));
+  bind("btn-yes", function(){ answer(1); });
+  bind("btn-no", function(){ answer(0); });
+  bind("undo", undo);
+  bind("new-goal", reset);
+  bind("reset-ask", function(){ confirmReset=true; render(); });
+  bind("reset-no", function(){ confirmReset=false; render(); });
+  bind("reset-yes", reset);
+}
+function bind(id, fn){ var el=document.getElementById(id); if(el) el.addEventListener("click", fn); }
+
+function render(justAnswered){
+  if(!ready){ return; }
+  if(state && valid(state)) renderGoal(justAnswered===true); else renderSetup();
+}
+
+/* ---------- confetti ---------- */
+function confetti(){
+  if(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  var c = document.getElementById("confetti"), ctx = c.getContext("2d");
+  var w = c.width = innerWidth, h = c.height = innerHeight;
+  var colors = ["#ffffff","#ffd23f","#18a058","#3a86ff","#ff6b9d"], parts = [];
+  for(var i=0;i<110;i++){
+    parts.push({x:w/2, y:h*0.3, vx:(Math.random()-0.5)*14, vy:-Math.random()*13-3, s:Math.random()*7+5, r:Math.random()*6, c:colors[i%colors.length]});
+  }
+  var t0 = performance.now();
+  (function frame(now){
+    var age = now - t0;
+    ctx.clearRect(0,0,w,h);
+    if(age > 2600) return;
+    parts.forEach(function(p){
+      p.vy += 0.35; p.x += p.vx; p.y += p.vy; p.r += 0.2;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r);
+      ctx.globalAlpha = Math.max(0, 1 - age/2600);
+      ctx.fillStyle = p.c; ctx.fillRect(-p.s/2,-p.s/3,p.s,p.s*0.66); ctx.restore();
+    });
+    requestAnimationFrame(frame);
+  })(t0);
+}
+
+/* ---------- start ---------- */
+loadLocal();
+if(state){ ready = true; render(); }
+
+ready = true; render();
+
+/* redraw when the day changes while the page stays open */
+var drawnDay = iso(today());
+document.addEventListener("visibilitychange", function(){
+  if(!document.hidden && iso(today()) !== drawnDay){ drawnDay = iso(today()); render(); }
+});
+})();
+</script>
+</body>
+</html>
